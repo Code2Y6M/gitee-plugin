@@ -1,0 +1,11 @@
+{
+  "properties": {
+    "authMode": {
+      "type": "string",
+      "title": "Authentication mode",
+      "enum": ["token", "oauth"],
+      "default": "token",
+      "description": "token: personal access token (gitee-token secret). oauth: OAuth2 bearer token (gitee-oauth-token secret)."
+    }
+  }
+}

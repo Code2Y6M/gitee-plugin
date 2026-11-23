@@ -1,0 +1,69 @@
+id = "openidea.gitee"
+name = "Gitee"
+version = "0.1.0"
+description = "Integrates Gitee (码云) into OpenIDEA: view and manage pull requests and issues, create remote repositories, and clone/push to Gitee — all from the editor."
+authors = ["You <you@example.com>"]
+homepage = "https://gitee.com"
+license = "Apache-2.0"
+change-notes = "0.1.0 — first release: PR/Issue browser, remote repo creation, clone/push, token + OAuth auth."
+categories = ["vcs"]
+icon = "icon.svg"
+engines.openidea = "^1.3"
+wasm = "dist/plugin.wasm"
+
+# Wake up on schedule (periodic PR/Issue refresh), when a project's VCS state
+# changes (so the status bar follows the focused repository), and when any of
+# the plugin's commands run.
+activation = ["on-schedule:300", "on-event:vcs-changed", "on-event:editor-focused", "on-command:*"]
+
+[capabilities]
+required = ["project.read", "vcs.read", "events", "net:gitee.com", "process:git"]
+optional = ["secrets"]
+
+[[contributes.commands]]
+id = "prs"
+title = "Gitee: List Pull Requests"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "issues"
+title = "Gitee: List Issues"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "create-repo"
+title = "Gitee: Create Repository"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "clone"
+title = "Gitee: Clone Repository"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "push"
+title = "Gitee: Push to Remote"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "refresh"
+title = "Gitee: Refresh Status"
+category = "Gitee"
+
+[contributes.settings]
+title = "Gitee"
+
+[[contributes.settings.pages]]
+id = "auth"
+title = "Authentication"
+schema = "settings/settings.json"
+
+[[contributes.secrets]]
+name = "gitee-token"
+label = "Gitee personal access token"
+description = "Your Gitee private token (used as `Authorization: token <token>`)."
+
+[[contributes.secrets]]
+name = "gitee-oauth-token"
+label = "Gitee OAuth access token"
+description = "OAuth2 bearer token (used as `Authorization: Bearer <token>`)."

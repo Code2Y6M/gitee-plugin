@@ -1,0 +1,17 @@
+{
+  "Gitee": "Gitee",
+  "Integrates Gitee (码云) into OpenIDEA: view and manage pull requests and issues, create remote repositories, and clone/push to Gitee — all from the editor.": "将 Gitee（码云）集成到 OpenIDEA：查看和管理 Pull Request 与 Issue、创建远程仓库、克隆/推送到 Gitee——全都在编辑器内完成。",
+  "Gitee: List Pull Requests": "Gitee：列出 Pull Request",
+  "Gitee: List Issues": "Gitee：列出 Issue",
+  "Gitee: Create Repository": "Gitee：创建仓库",
+  "Gitee: Clone Repository": "Gitee：克隆仓库",
+  "Gitee: Push to Remote": "Gitee：推送到远程",
+  "Gitee: Refresh Status": "Gitee：刷新状态",
+  "Authentication": "鉴权",
+  "Gitee personal access token": "Gitee 私人访问令牌",
+  "Your Gitee private token (used as `Authorization: token <token>`).": "你的 Gitee 私人令牌（用作 `Authorization: token <token>`）。",
+  "Gitee OAuth access token": "Gitee OAuth 访问令牌",
+  "OAuth2 bearer token (used as `Authorization: Bearer <token>`).": "OAuth2 Bearer 令牌（用作 `Authorization: Bearer <token>`）。",
+  "Authentication mode": "鉴权方式",
+  "token: personal access token (gitee-token secret). oauth: OAuth2 bearer token (gitee-oauth-token secret).": "token：私人访问令牌（gitee-token 密钥）。oauth：OAuth2 Bearer 令牌（gitee-oauth-token 密钥）。"
+}
