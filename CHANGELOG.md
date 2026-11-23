@@ -3,6 +3,22 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.0.3
+
+### Fixed
+
+- **Cloning from the panel works again.** The toolbar's Clone button and
+  double-clicking a repository passed the key without its `repo:` prefix to a
+  function that required it, so the clone never started (and the error was
+  dropped). Both paths now hand over the node's own key, report failures, and
+  `clone-item` also accepts a bare `owner/repo`. Regression tests cover the
+  button and the double-click.
+- **Boolean and number settings are read correctly.** `host::setting_string`
+  only unwraps JSON strings, so a `true` setting (`requireIssueInCommit`) and
+  numbers (`defaultPageSize`, `refreshSeconds`) silently fell back to their
+  defaults; the plugin now uses `host::setting_bool` / `host::setting_number`.
+  A test drives the commit check through a JSON boolean.
+
 ## 1.0.2
 
 ### Fixed

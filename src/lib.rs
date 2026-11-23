@@ -65,16 +65,15 @@ fn setting_string(key: &str) -> Option<String> {
     host::setting_string(key).filter(|v| !v.trim().is_empty())
 }
 
+/// A number setting. `host::setting` hands back JSON (`50`), not a string, so
+/// `setting_string` would drop it and the default would win.
 fn setting_u32(key: &str, default: u32) -> u32 {
-    setting_string(key).and_then(|v| v.trim().parse().ok()).unwrap_or(default)
+    host::setting_number(key).map(|n| n as u32).unwrap_or(default)
 }
 
+/// A boolean setting (`true`/`false` in the stored JSON).
 fn setting_bool(key: &str, default: bool) -> bool {
-    match setting_string(key).as_deref() {
-        Some("true") | Some("1") | Some("yes") => true,
-        Some("false") | Some("0") | Some("no") => false,
-        _ => default,
-    }
+    host::setting_bool(key).unwrap_or(default)
 }
 
 fn page_size() -> u32 {
@@ -535,13 +534,17 @@ impl Views for GiteePlugin {
                     }
                 }
                 "clone" => {
-                    if let Some(full) = self.selected.as_deref().and_then(|k| k.strip_prefix("repo:")) {
-                        let full = full.to_owned();
-                        let _ = self.cmd_clone_item(ctx, Some(&full));
+                    // Hand over the node's own key: `cmd_clone_item` strips `repo:`.
+                    if let Some(key) = self.selected.clone().filter(|k| k.starts_with("repo:"))
+                        && let Err(e) = self.cmd_clone_item(ctx, Some(&key))
+                    {
+                        self.notify_error(&e);
                     }
                 }
                 "commands" => {
-                    let _ = self.cmd_commands(ctx);
+                    if let Err(e) = self.cmd_commands(ctx) {
+                        self.notify_error(&e);
+                    }
                 }
                 _ => {}
             },
@@ -558,11 +561,15 @@ impl Views for GiteePlugin {
             }
             ViewEvent::Activate(key) => {
                 self.selected = Some(key.clone());
-                if let Some(full) = key.strip_prefix("repo:") {
-                    let full = full.to_owned();
-                    let _ = self.cmd_clone_item(ctx, Some(&full));
+                let result = if key.starts_with("repo:") {
+                    self.cmd_clone_item(ctx, Some(&key))
                 } else if key.starts_with("pr:") || key.starts_with("issue:") || key.starts_with("notif:") {
-                    let _ = self.cmd_detail(ctx, Some(&key));
+                    self.cmd_detail(ctx, Some(&key))
+                } else {
+                    Ok(None)
+                };
+                if let Err(e) = result {
+                    self.notify_error(&e);
                 }
             }
             _ => {}
@@ -1123,11 +1130,14 @@ impl GiteePlugin {
 
     /// Clone the repository of a `repo:` item (or the given one).
     fn cmd_clone_item(&self, _ctx: &Invocation, arg: Option<&str>) -> Result<Option<String>, Error> {
-        let Some(full) = arg.map(str::to_owned).or_else(|| self.selected.clone()).filter(|k| k.starts_with("repo:"))
-        else {
-            return Err(Error::Invalid(t("请选择一个仓库。", "Select a repository first.").to_owned()));
-        };
-        let remote = full.trim_start_matches("repo:");
+        let key = arg.map(str::to_owned).or_else(|| self.selected.clone()).ok_or_else(|| {
+            Error::Invalid(t("请选择一个仓库。", "Select a repository first.").to_owned())
+        })?;
+        // `repo:owner/name` from the panel, or a bare `owner/name`.
+        let remote = key.strip_prefix("repo:").unwrap_or(&key);
+        if parse_remote(remote).is_none() {
+            return Err(Error::Invalid(format!("not a Gitee repository: {remote}")));
+        }
         self.clone_remote(remote)
     }
 
@@ -1740,6 +1750,94 @@ mod tests {
         };
         // The check is off by default.
         assert!(plugin.check(COMMIT_CHECK, &draft("no reference"), &ctx).unwrap().is_empty());
+    }
+
+    /// A host where cloning can run: git answers, a directory is chosen.
+    fn clone_host() -> MockHost {
+        let host = MockHost::install().with_capabilities(&[
+            "secrets",
+            "net:gitee.com",
+            "project.read",
+            "vcs.read",
+            "events",
+            "process:git",
+        ]);
+        host.set_secret("gitee-token", "test-token");
+        host.on_fetch(|req| {
+            let body = if req.url.contains("/notifications/threads") {
+                "[]"
+            } else if req.url.contains("/repos/acme/widgets") {
+                r#"{"full_name":"acme/widgets","clone_url":"https://gitee.com/acme/widgets.git","private":false}"#
+            } else {
+                r#"[{"full_name":"acme/widgets","clone_url":"https://gitee.com/acme/widgets.git"}]"#
+            };
+            crate::api::json(200, body)
+        });
+        host.on_process("git", |_, _| {
+            Ok(openidea_plugin::ProcessOutput { status: Some(0), stdout: String::new(), stderr: String::new() })
+        });
+        // The directory picker.
+        host.answer_next_prompt(Some(&["C:/work"]));
+        host
+    }
+
+    /// Whether `git clone` ran for this repository and the result was opened.
+    fn cloned(host: &MockHost) -> bool {
+        let git = host
+            .process_runs()
+            .iter()
+            .any(|run| run.program == "git" && run.args.first().is_some_and(|a| a == "clone"));
+        git && !host.opened_projects().is_empty()
+    }
+
+    #[test]
+    fn the_panel_clone_button_clones_the_selected_repository() {
+        let host = clone_host();
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin { selected: Some("repo:acme/widgets".into()), ..GiteePlugin::default() };
+        plugin.handle(VIEW_ID, ViewEvent::Button("clone".into()), &ctx).unwrap();
+        assert!(cloned(&host), "the clone button must run git clone and open the project");
+    }
+
+    #[test]
+    fn double_clicking_a_repository_clones_it() {
+        let host = clone_host();
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        plugin.handle(VIEW_ID, ViewEvent::Activate("repo:acme/widgets".into()), &ctx).unwrap();
+        assert!(cloned(&host), "activating a repository must clone it");
+    }
+
+    #[test]
+    fn the_commit_check_reads_a_boolean_setting() {
+        let host = MockHost::install();
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        let draft = |message: &str| CommitDraft {
+            revision: 1,
+            message: message.into(),
+            amend: false,
+            changes: Vec::new(),
+        };
+        // A JSON boolean, as the settings page stores it.
+        host.set_setting("requireIssueInCommit", "true");
+        let problems = plugin.check(COMMIT_CHECK, &draft("no reference"), &ctx).unwrap();
+        assert_eq!(problems.len(), 1, "the check must run when the setting is true");
+        assert!(plugin.check(COMMIT_CHECK, &draft("fix (#12)"), &ctx).unwrap().is_empty());
+        host.set_setting("requireIssueInCommit", "false");
+        assert!(plugin.check(COMMIT_CHECK, &draft("no reference"), &ctx).unwrap().is_empty());
+    }
+
+    #[test]
+    fn numeric_settings_are_read_as_json_numbers() {
+        let host = MockHost::install();
+        host.set_setting("defaultPageSize", "80");
+        assert_eq!(page_size(), 80);
+        host.set_setting("refreshSeconds", "120");
+        assert_eq!(cache_seconds(), 120);
+        // Out-of-range values fall back into the allowed window.
+        host.set_setting("defaultPageSize", "5000");
+        assert_eq!(page_size(), Page::MAX_PER_PAGE);
     }
 
     #[test]
