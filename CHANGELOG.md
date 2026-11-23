@@ -3,6 +3,15 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.0.2
+
+### Fixed
+
+- The **command picker** is one line per entry. 1.0.1 removed the second line
+  from the file and label pickers but missed this one, so the command id still
+  overlapped its label in OpenIDEA 0.1.50. A test now fails if any picker item
+  carries a description.
+
 ## 1.0.1
 
 ### Fixed

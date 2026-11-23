@@ -1303,19 +1303,21 @@ impl GiteePlugin {
     /// Every Gitee command, as a picker: the panel's "commands" button and the
     /// status bar menu. It is the one place to see what the plugin can do.
     fn cmd_commands(&mut self, ctx: &Invocation) -> Result<Option<String>, Error> {
-        let items: Vec<PickItem> = COMMANDS
-            .iter()
-            .map(|(id, zh, en)| {
-                let label = t(zh, en);
-                PickItem::new(id, &label).description(id)
-            })
-            .collect();
+        let items = command_items();
         let Some(id) = host::pick(&t("Gitee 命令", "Gitee commands"), &items)? else {
             return Ok(None);
         };
         let id = id.to_owned();
         self.run_command(&id, ctx, None)
     }
+}
+
+/// The entries of the "all commands" picker.
+///
+/// One line each: OpenIDEA 0.1.50 draws a pick item's `description` into a row
+/// that is still one line high, so a second line overlaps the first.
+fn command_items() -> Vec<PickItem> {
+    COMMANDS.iter().map(|(id, zh, en)| PickItem::new(id, &t(zh, en))).collect()
 }
 
 /// The commands the picker lists: id, Chinese label, English label.
@@ -1738,6 +1740,24 @@ mod tests {
         };
         // The check is off by default.
         assert!(plugin.check(COMMIT_CHECK, &draft("no reference"), &ctx).unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_command_picker_puts_everything_on_one_line() {
+        // OpenIDEA 0.1.50 renders `description` into a one-line row, where it
+        // overlaps the label; the picker must not send one.
+        let _host = MockHost::install();
+        let items = command_items();
+        assert_eq!(items.len(), COMMANDS.len());
+        let mut keys: Vec<&str> = items.iter().map(|i| i.key.as_str()).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), COMMANDS.len(), "command ids must be unique");
+        for item in &items {
+            assert!(item.description.is_none(), "{} must be one line", item.key);
+            assert!(!item.label.trim().is_empty(), "{} needs a label", item.key);
+            assert!(!item.label.contains('\n'), "{} must not wrap", item.key);
+        }
     }
 
     #[test]
