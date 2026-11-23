@@ -12,7 +12,7 @@
 mod api;
 
 use openidea_plugin::{
-    Event, Invocation, Plugin, StatusItem, host, register_plugin,
+    Event, Invocation, PickItem, Plugin, StatusItem, host, register_plugin,
 };
 use api::{AuthMode, RepoRef, parse_remote};
 
@@ -126,27 +126,95 @@ impl GiteePlugin {
         )))
     }
 
-    /// Clone a Gitee repository via the `git` executable (requires `process:git`).
+    /// Clone a Gitee repository interactively, like the welcome screen's
+    /// clone flow: pick a repository (or enter a URL / owner/repo), choose a
+    /// target directory, then clone and open the project.
     fn cmd_clone(
         &self,
-        ctx: &Invocation,
+        _ctx: &Invocation,
         arg: Option<&str>,
     ) -> Result<Option<String>, openidea_plugin::Error> {
-        let remote = arg.ok_or("usage: clone <owner/repo or gitee url>")?;
-        let repo = parse_remote(remote).ok_or("not a Gitee remote")?;
-        // Verify the repository exists and is accessible before cloning.
-        let _info = api::get_repository(remote, auth_mode())?;
-        let url = format!("https://gitee.com/{}.git", repo.slug());
-        let project = ctx.project().ok_or("no project open")?;
-        let out = project.run_process("git", &["clone".to_owned(), url], None)?;
+        // Resolve the remote: an explicit argument wins; otherwise ask the
+        // user — entering `owner/repo` or a URL, or picking from their repos.
+        let remote: String = match arg {
+            Some(a) if !a.trim().is_empty() => a.to_owned(),
+            _ => match self.pick_repository()? {
+                Some(r) => r.full_name.clone(),
+                None => return Ok(None), // user cancelled
+            },
+        };
+
+        let repo = parse_remote(&remote)
+            .ok_or_else(|| openidea_plugin::Error::Invalid(format!("not a Gitee remote: {remote}")))?;
+
+        // Verify the repository exists and is reachable before cloning.
+        let info = api::get_repository(&remote, auth_mode())?;
+        let url = if info.clone_url.is_empty() {
+            format!("https://gitee.com/{}.git", repo.slug())
+        } else {
+            info.clone_url
+        };
+
+        // Choose where to put it.
+        let target = host::pick_directory("Clone into…", None)?;
+        let Some(target) = target else {
+            return Ok(None); // user cancelled
+        };
+        let dest = format!("{}/{}", target.trim_end_matches(['/', '\\']), repo.repo);
+
+        // Clone into the chosen directory (absolute path as git's argument,
+        // so the process working directory does not matter).
+        let out = host::run_process(
+            "git",
+            &["clone".to_owned(), url, dest.clone()],
+            None,
+        )?;
         if out.status.map_or(true, |s| s != 0) {
-            return Err(openidea_plugin::Error::Failed(if out.stderr.is_empty() {
-                out.stdout
-            } else {
-                out.stderr
-            }));
+            let msg = if out.stderr.is_empty() { out.stdout } else { out.stderr };
+            return Err(openidea_plugin::Error::Failed(msg));
         }
-        Ok(Some(format!("Cloned {}", repo)))
+
+        // Open the freshly cloned project in the IDE.
+        host::open_project(&dest, false)?;
+        host::notify(
+            openidea_plugin::NotificationLevel::Info,
+            "Gitee",
+            &format!("Cloned {} into {}", repo, dest),
+        );
+        Ok(None)
+    }
+
+    /// Ask the user to pick one of their Gitee repositories, falling back to
+    /// manual `owner/repo` input when the list is empty or unavailable.
+    /// Returns `Ok(None)` when the user cancels.
+    fn pick_repository(&self) -> Result<Option<api::Repository>, openidea_plugin::Error> {
+        match api::list_repositories(auth_mode()) {
+            Ok(repos) if !repos.is_empty() => {
+                let items: Vec<PickItem> = repos
+                    .iter()
+                    .map(|r| {
+                        PickItem::new(&r.full_name, &r.full_name)
+                            .description(if r.clone_url.is_empty() {
+                                "repository"
+                            } else {
+                                &r.clone_url
+                            })
+                    })
+                    .collect();
+                if let Some(key) = host::pick("Clone a Gitee repository", &items)? {
+                    return Ok(repos.iter().find(|r| r.full_name == key).cloned());
+                }
+                // User cancelled the picker.
+                Ok(None)
+            }
+            _ => {
+                let input = host::input("Gitee repository (owner/repo or URL)", None)?;
+                let Some(input) = input else {
+                    return Ok(None); // user cancelled
+                };
+                api::get_repository(&input, auth_mode()).map(Some)
+            }
+        }
     }
 
     /// Push the current branch to its upstream via `git` (requires `process:git`).

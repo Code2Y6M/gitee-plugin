@@ -249,6 +249,16 @@ pub fn get_repository(remote: &str, auth: AuthMode) -> Result<Repository, Error>
     get_json(&format!("{API_BASE}/repos/{}", repo.slug()), auth)
 }
 
+/// List the repositories the authenticated user owns or can access.
+///
+/// Uses the `/user/repos` endpoint (returns the user's own repos, including
+/// private ones when the token has the right scope), sorted by most recently
+/// pushed first. Fall back to `/repos`-style listing is not needed here.
+pub fn list_repositories(auth: AuthMode) -> Result<Vec<Repository>, Error> {
+    let url = format!("{API_BASE}/user/repos?per_page=100&sort=pushed");
+    get_json(&url, auth)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
