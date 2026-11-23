@@ -1,11 +1,11 @@
 id = "code2y6m.gitee-plugin"
 name = "Gitee"
-version = "0.1.1"
+version = "0.2.0"
 description = "Integrates Gitee (码云) into OpenIDEA: view and manage pull requests and issues, create remote repositories, and clone/push to Gitee — all from the editor."
 authors = ["Key"]
 homepage = "https://gitee.com"
 license = "Apache-2.0"
-change-notes = "0.1.1 — interactive clone: pick a repository or enter a URL, choose a target folder, clone and open the project."
+change-notes = "0.2.0 — Gitee tool window: the project's pull requests and issues, and every repository of the token; double-click a repository to clone it. Also reachable from Tools menu."
 categories = ["vcs"]
 icon = "icon.svg"
 engines.openidea = "^1.3"
@@ -49,6 +49,24 @@ category = "Gitee"
 id = "refresh"
 title = "Gitee: Refresh Status"
 category = "Gitee"
+
+[[contributes.commands]]
+id = "show-panel"
+title = "Gitee: Open Repositories Panel"
+category = "Gitee"
+
+# The Gitee tool window: the current project's pull requests and issues, and
+# the token's repositories (double-click clones one). The IDE renders it.
+[[contributes.views]]
+id = "repos"
+title = "Gitee"
+icon = "branch"
+location = "right"
+
+# Tools › Gitee: Open Repositories Panel
+[[contributes.menus]]
+menu = "tools"
+command = "show-panel"
 
 [contributes.settings]
 title = "Gitee"

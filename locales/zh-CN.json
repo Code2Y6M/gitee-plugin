@@ -7,6 +7,7 @@
   "Gitee: Clone Repository": "Gitee：克隆仓库",
   "Gitee: Push to Remote": "Gitee：推送到远程",
   "Gitee: Refresh Status": "Gitee：刷新状态",
+  "Gitee: Open Repositories Panel": "Gitee：打开仓库面板",
   "Authentication": "鉴权",
   "Gitee personal access token": "Gitee 私人访问令牌",
   "Your Gitee private token (used as `Authorization: token <token>`).": "你的 Gitee 私人令牌（用作 `Authorization: token <token>`）。",

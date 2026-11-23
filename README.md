@@ -8,6 +8,7 @@ OpenIDEA 插件是**沙箱化的 WebAssembly 组件**（WASI preview 2），用 
 
 | 命令 | 说明 |
 | --- | --- |
+| `Gitee: Open Repositories Panel` | 打开 Gitee 工具窗口（也可从「工具 › Gitee: 打开仓库面板」进入） |
 | `Gitee: List Pull Requests` | 列出当前项目对应 Gitee 仓库的 open PR |
 | `Gitee: List Issues` | 列出 open Issue |
 | `Gitee: Create Repository` | 在账户下创建远程仓库（`<name>`） |
@@ -15,7 +16,16 @@ OpenIDEA 插件是**沙箱化的 WebAssembly 组件**（WASI preview 2），用 
 | `Gitee: Push to Remote` | 推送当前分支到上游 |
 | `Gitee: Refresh Status` | 手动刷新状态栏 |
 
-状态栏会显示当前项目对应的 Gitee 仓库和 open PR 数量，点击即可列出 PR。
+状态栏会显示当前项目对应的 Gitee 仓库和 open PR 数量，点击即打开 Gitee 面板。
+
+### Gitee 工具窗口
+
+「工具 › Gitee: 打开仓库面板」打开右侧的 **Gitee** 面板：
+
+- **当前项目**：当前仓库的 open PR 与 Issue（树形列出，带作者）
+- **我的仓库**：令牌可见的全部仓库；双击（或选中后点「克隆选中项」）即进入克隆流程——选目录、`git clone`、自动打开项目
+- 工具栏：刷新、克隆选中项、新建仓库
+- 面板未配置令牌时给出提示，指引到「设置 › 插件 › Gitee › Secrets」
 
 ## 鉴权
 
