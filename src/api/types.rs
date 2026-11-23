@@ -262,8 +262,6 @@ pub struct Issue {
 #[derive(Clone, Debug, Deserialize)]
 pub struct RepoLabel {
     pub name: String,
-    #[serde(default)]
-    pub color: Option<String>,
 }
 
 /// One entry of Gitee's notification inbox.

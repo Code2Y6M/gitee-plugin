@@ -3,6 +3,21 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.0.1
+
+### Fixed
+
+- The command picker and the changed-files picker show one line per entry.
+  OpenIDEA 0.1.50 renders a picker item's `description` into a row that is
+  still one line high, so the two texts overlapped; the label now carries the
+  information instead.
+- The panel names the current project ("当前项目 · owner/repo") instead of
+  showing a bare `owner/repo` next to "My repositories".
+
+### Changed
+
+- Shorter command labels in the picker ("列出 PR", "合并 PR…").
+
 ## 1.0.0
 
 The first release meant for daily use: the plugin now covers reading, writing and

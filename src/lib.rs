@@ -352,7 +352,8 @@ impl GiteePlugin {
 
         // The current project's Gitee repository.
         if let Some(repo) = current_repo(ctx) {
-            items.push(TreeItem::new("project", &repo.to_string()).icon("branch").expandable(true));
+            let project_label = format!("{} · {repo}", t("当前项目", "Current project"));
+            items.push(TreeItem::new("project", &project_label).icon("branch").expandable(true));
 
             let pr_label = format!("Pull Requests ({}) · {}", self.prs.len(), pr_filter_text(self.pr_filter));
             items.push(TreeItem::new("prs", &pr_label).parent("project").icon("git-pull"));
@@ -786,12 +787,13 @@ impl GiteePlugin {
         let items: Vec<PickItem> = files
             .iter()
             .map(|file| {
-                let description = match (&file.patch, file.status.as_deref()) {
+                let note = match (&file.patch, file.status.as_deref()) {
                     (Some(_), Some(status)) => format!("{} · {status}", file.stats()),
                     (Some(_), None) => file.stats(),
                     (None, _) => t("无 diff（大文件或二进制）", "no diff (large or binary)").to_owned(),
                 };
-                PickItem::new(&file.filename, &file.filename).description(&description)
+                let label = if note.is_empty() { file.filename.clone() } else { format!("{}  {note}", file.filename) };
+                PickItem::new(&file.filename, &label)
             })
             .collect();
         let Some(chosen) = host::pick(&format!("PR #{number} · {}", t("改动文件", "changed files")), &items)? else {
@@ -1093,13 +1095,7 @@ impl GiteePlugin {
         if labels.is_empty() {
             return Ok(Vec::new());
         }
-        let items: Vec<PickItem> = labels
-            .iter()
-            .map(|l| {
-                let description = l.color.clone().unwrap_or_default();
-                PickItem::new(&l.name, &l.name).description(&description)
-            })
-            .collect();
+        let items: Vec<PickItem> = labels.iter().map(|l| PickItem::new(&l.name, &l.name)).collect();
         Ok(host::pick_many(&t("标签（可多选）", "Labels (pick any)"), &items)?.unwrap_or_default())
     }
 
@@ -1324,26 +1320,26 @@ impl GiteePlugin {
 
 /// The commands the picker lists: id, Chinese label, English label.
 const COMMANDS: &[(&str, &str, &str)] = &[
-    ("show-panel", "打开 Gitee 面板", "Open Gitee panel"),
-    ("prs", "列出 Pull Requests", "List pull requests"),
-    ("issues", "列出 Issues", "List issues"),
-    ("notifications", "通知", "Notifications"),
-    ("notifications-read", "全部标记为已读", "Mark all notifications read"),
-    ("create-pr", "创建 Pull Request…", "Create pull request…"),
-    ("issue-create", "新建 Issue…", "New issue…"),
-    ("issue-state", "修改 Issue 状态…", "Change issue state…"),
+    ("show-panel", "打开面板", "Open panel"),
     ("detail", "查看详情", "Show details"),
-    ("files", "查看改动文件…", "Show changed files…"),
+    ("files", "查看改动文件…", "Changed files…"),
+    ("prs", "列出 PR", "List pull requests"),
+    ("issues", "列出 Issue", "List issues"),
+    ("create-pr", "新建 PR…", "New pull request…"),
     ("comment", "评论…", "Comment…"),
     ("approve", "通过审查", "Approve"),
-    ("merge", "合并 PR…", "Merge pull request…"),
-    ("open-item", "在浏览器打开", "Open in browser"),
-    ("open-file", "在 Gitee 打开当前文件", "Open this file on Gitee"),
+    ("merge", "合并 PR…", "Merge…"),
+    ("issue-create", "新建 Issue…", "New issue…"),
+    ("issue-state", "改 Issue 状态…", "Change issue state…"),
+    ("notifications", "通知", "Notifications"),
+    ("notifications-read", "通知：全部已读", "Mark all read"),
     ("clone", "克隆仓库…", "Clone repository…"),
-    ("clone-item", "克隆选中仓库", "Clone the selected repository"),
+    ("clone-item", "克隆选中仓库", "Clone selected repository"),
     ("create-repo", "创建仓库…", "Create repository…"),
-    ("push", "推送到远程", "Push to remote"),
-    ("commit-message", "在提交信息里引用 Issue…", "Reference an issue in the commit message…"),
+    ("push", "推送到远程", "Push"),
+    ("open-item", "浏览器打开", "Open in browser"),
+    ("open-file", "打开当前文件", "Open this file"),
+    ("commit-message", "引用 Issue 到提交…", "Issue in commit message…"),
     ("refresh", "刷新", "Refresh"),
 ];
 

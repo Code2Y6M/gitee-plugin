@@ -1,11 +1,11 @@
 id = "code2y6m.gitee-plugin"
 name = "Gitee"
-version = "1.0.0"
+version = "1.0.1"
 description = "Integrates Gitee (码云) into OpenIDEA: browse and manage pull requests and issues, review changes, clone and push, and hand Gitee to the AI agent — all from the editor."
 authors = ["Key"]
 homepage = "https://gitee.com"
 license = "Apache-2.0"
-change-notes = "1.0.0 — the Gitee panel now covers the whole loop: notifications, pull request and issue details, changed files, comments, approve and merge, new issues, a commit-message helper and commit check, Search Everywhere and MCP tools for the agent. Lists are cached and paged, and errors say what to fix."
+change-notes = "1.0.1 — the command picker and file picker show one line per entry (OpenIDEA 0.1.50 drew the second line over the first), the panel names the current project, and the command list is shorter to read."
 categories = ["vcs"]
 icon = "icon.svg"
 engines.openidea = "^1.14"
