@@ -1,3 +1,7 @@
 /target
 /dist
 *.wasm
+
+# 发布密钥（私钥绝不能提交到仓库）
+*.key
+*.oiplugin
