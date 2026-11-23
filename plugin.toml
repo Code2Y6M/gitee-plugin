@@ -1,14 +1,14 @@
 id = "code2y6m.gitee-plugin"
 name = "Gitee"
-version = "0.2.0"
-description = "Integrates Gitee (码云) into OpenIDEA: view and manage pull requests and issues, create remote repositories, and clone/push to Gitee — all from the editor."
+version = "1.0.0"
+description = "Integrates Gitee (码云) into OpenIDEA: browse and manage pull requests and issues, review changes, clone and push, and hand Gitee to the AI agent — all from the editor."
 authors = ["Key"]
 homepage = "https://gitee.com"
 license = "Apache-2.0"
-change-notes = "0.2.0 — Gitee tool window: the project's pull requests and issues, and every repository of the token; double-click a repository to clone it. Also reachable from Tools menu."
+change-notes = "1.0.0 — the Gitee panel now covers the whole loop: notifications, pull request and issue details, changed files, comments, approve and merge, new issues, a commit-message helper and commit check, Search Everywhere and MCP tools for the agent. Lists are cached and paged, and errors say what to fix."
 categories = ["vcs"]
 icon = "icon.svg"
-engines.openidea = "^1.3"
+engines.openidea = "^1.14"
 wasm = "dist/plugin.wasm"
 
 # Wake up on schedule (periodic PR/Issue refresh), when a project's VCS state
@@ -17,8 +17,18 @@ wasm = "dist/plugin.wasm"
 activation = ["on-schedule:300", "on-event:vcs-changed", "on-event:editor-focused", "on-command:*"]
 
 [capabilities]
-required = ["project.read", "vcs.read", "events", "net:gitee.com", "process:git"]
+required = ["project.read", "vcs.read", "vcs.write", "events", "net:gitee.com", "process:git"]
 optional = ["secrets"]
+
+[[contributes.commands]]
+id = "show-panel"
+title = "Gitee: Open Repositories Panel"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "commands"
+title = "Gitee: All Commands"
+category = "Gitee"
 
 [[contributes.commands]]
 id = "prs"
@@ -28,6 +38,31 @@ category = "Gitee"
 [[contributes.commands]]
 id = "issues"
 title = "Gitee: List Issues"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "notifications"
+title = "Gitee: Notifications"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "notifications-read"
+title = "Gitee: Mark All Notifications Read"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "create-pr"
+title = "Gitee: Create Pull Request"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "issue-create"
+title = "Gitee: New Issue"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "issue-state"
+title = "Gitee: Change Issue State"
 category = "Gitee"
 
 [[contributes.commands]]
@@ -41,22 +76,62 @@ title = "Gitee: Clone Repository"
 category = "Gitee"
 
 [[contributes.commands]]
+id = "clone-item"
+title = "Gitee: Clone This Repository"
+category = "Gitee"
+
+[[contributes.commands]]
 id = "push"
 title = "Gitee: Push to Remote"
 category = "Gitee"
 
 [[contributes.commands]]
 id = "refresh"
-title = "Gitee: Refresh Status"
+title = "Gitee: Refresh"
 category = "Gitee"
 
 [[contributes.commands]]
-id = "show-panel"
-title = "Gitee: Open Repositories Panel"
+id = "detail"
+title = "Gitee: Show Details"
 category = "Gitee"
 
-# The Gitee tool window: the current project's pull requests and issues, and
-# the token's repositories (double-click clones one). The IDE renders it.
+[[contributes.commands]]
+id = "files"
+title = "Gitee: Show Changed Files"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "comment"
+title = "Gitee: Comment"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "approve"
+title = "Gitee: Approve Pull Request"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "merge"
+title = "Gitee: Merge Pull Request"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "open-item"
+title = "Gitee: Open in Browser"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "open-file"
+title = "Gitee: Open This File on Gitee"
+category = "Gitee"
+
+[[contributes.commands]]
+id = "commit-message"
+title = "Gitee: Use Issue in Commit Message"
+category = "Gitee"
+
+# The Gitee tool window: the token's notifications and repositories, and the
+# current project's pull requests and issues. The IDE renders it.
 [[contributes.views]]
 id = "repos"
 title = "Gitee"
@@ -67,6 +142,112 @@ location = "right"
 [[contributes.menus]]
 menu = "tools"
 command = "show-panel"
+
+# Right-click entries of the panel's items, grouped under a "Gitee" submenu.
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "detail"
+submenu = "Gitee"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "files"
+submenu = "Gitee"
+when = "viewItemKind == pr"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "comment"
+submenu = "Gitee"
+when = "viewItemKind == pr"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "approve"
+submenu = "Gitee"
+when = "viewItemKind == pr"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "merge"
+submenu = "Gitee"
+when = "viewItemKind == pr"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "issue-state"
+submenu = "Gitee"
+when = "viewItemKind == issue"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "clone-item"
+submenu = "Gitee"
+when = "viewItemKind == repo"
+
+[[contributes.menus]]
+menu = "viewItem.context"
+view = "repos"
+command = "open-item"
+submenu = "Gitee"
+
+[[contributes.menus]]
+menu = "editor.context"
+command = "open-file"
+submenu = "Gitee"
+
+[[contributes.menus]]
+menu = "projectView.context"
+command = "show-panel"
+submenu = "Gitee"
+
+# The toolbar above the commit message (Commit tool window / dialog).
+[[contributes.menus]]
+menu = "commit.message"
+command = "commit-message"
+
+[[contributes.commitChecks]]
+id = "issue-reference"
+title = "Gitee: the message references an issue"
+
+[[contributes.searchCategories]]
+id = "gitee"
+title = "Gitee"
+
+[[contributes.mcpTools]]
+name = "gitee_list_prs"
+description = "List Gitee pull requests of the current project's repository (or of the owner/repo given in args)."
+inputSchema = "mcp/list_prs.schema.json"
+readOnly = true
+destructive = false
+
+[[contributes.mcpTools]]
+name = "gitee_pr_detail"
+description = "Read one Gitee pull request: state, author, branches, description and changed files."
+inputSchema = "mcp/pr_detail.schema.json"
+readOnly = true
+destructive = false
+
+[[contributes.mcpTools]]
+name = "gitee_list_issues"
+description = "List Gitee issues of the current project's repository (or of the owner/repo given in args)."
+inputSchema = "mcp/list_issues.schema.json"
+readOnly = true
+destructive = false
+
+[[contributes.mcpTools]]
+name = "gitee_create_issue"
+description = "Create a Gitee issue in the current project's repository (or in the owner/repo given in args)."
+inputSchema = "mcp/create_issue.schema.json"
+readOnly = false
+destructive = true
 
 [contributes.settings]
 title = "Gitee"

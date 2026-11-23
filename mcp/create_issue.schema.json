@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "owner/repo or a Gitee URL. Defaults to the current project's Gitee remote."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The issue title."
+    },
+    "body": {
+      "type": "string",
+      "description": "The issue description (Markdown)."
+    },
+    "labels": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Label names that exist in the repository."
+    },
+    "assignee": {
+      "type": "string",
+      "description": "Gitee login to assign the issue to."
+    }
+  },
+  "required": ["title"],
+  "additionalProperties": false
+}

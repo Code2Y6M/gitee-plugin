@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "repo": {
+      "type": "string",
+      "description": "owner/repo or a Gitee URL. Defaults to the current project's Gitee remote."
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The pull request number."
+    },
+    "files": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include the changed files (up to 100)."
+    }
+  },
+  "required": ["number"],
+  "additionalProperties": false
+}

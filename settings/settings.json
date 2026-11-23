@@ -6,6 +6,40 @@
       "enum": ["token", "oauth"],
       "default": "token",
       "description": "token: personal access token (gitee-token secret). oauth: OAuth2 bearer token (gitee-oauth-token secret)."
+    },
+    "defaultPageSize": {
+      "type": "number",
+      "title": "Items per page",
+      "default": 50,
+      "minimum": 10,
+      "maximum": 100,
+      "description": "How many repositories, pull requests and issues the panel asks Gitee for at once."
+    },
+    "refreshSeconds": {
+      "type": "number",
+      "title": "Panel cache (seconds)",
+      "default": 30,
+      "minimum": 5,
+      "maximum": 600,
+      "description": "How long fetched lists are reused before the panel asks Gitee again."
+    },
+    "preferredRemote": {
+      "type": "string",
+      "title": "Preferred remote",
+      "default": "origin",
+      "description": "Which Gitee remote to use when a project has several (its name; the first Gitee remote wins when it is not Gitee)."
+    },
+    "confirmBeforeWrite": {
+      "type": "boolean",
+      "title": "Confirm before changing anything on Gitee",
+      "default": true,
+      "description": "Ask before merging, approving, commenting, closing issues or creating repositories."
+    },
+    "requireIssueInCommit": {
+      "type": "boolean",
+      "title": "Require an issue reference in commit messages",
+      "default": false,
+      "description": "The commit check warns when the message names no Gitee issue (e.g. #12)."
     }
   }
 }
