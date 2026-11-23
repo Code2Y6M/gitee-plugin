@@ -187,9 +187,12 @@ pub struct BranchRef {
 }
 
 /// A Gitee issue (subset).
+///
+/// Gitee's `number` is a project-scoped identifier that may be non-numeric
+/// (e.g. `"ICK440"`), so it is kept as a string rather than `u64`.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Issue {
-    pub number: u64,
+    pub number: String,
     pub title: String,
     pub state: String,
     pub html_url: String,
@@ -312,6 +315,17 @@ mod tests {
         .unwrap();
         assert_eq!(p.number, 42);
         assert_eq!(p.head.unwrap().label, "a:dev");
+    }
+
+    #[test]
+    fn parses_issue_number_as_string() {
+        // Gitee issue numbers are project-scoped and may be non-numeric
+        // (e.g. "ICK440"); they must deserialize into `String`, not `u64`.
+        let i: Issue = serde_json::from_str(
+            r#"{"number":"ICK440","title":"t","state":"open","html_url":"https://gitee.com/f/b/issues/ICK440","user":{"login":"a"}}"#,
+        )
+        .unwrap();
+        assert_eq!(i.number, "ICK440");
     }
 
     #[test]
