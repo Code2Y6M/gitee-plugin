@@ -3,6 +3,14 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## Unreleased
+
+### Fixed
+
+- `homepage` points at the project repository (`github.com/Code2Y6M/gitee-plugin`)
+  instead of gitee.com, which is the service the plugin talks to rather than its
+  own page. Not released on its own; it ships with the next version.
+
 ## 1.0.3
 
 ### Fixed
