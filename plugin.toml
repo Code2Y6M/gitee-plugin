@@ -1,4 +1,4 @@
-id = "openidea.gitee"
+id = "code2y6m.gitee-plugin"
 name = "Gitee"
 version = "0.1.0"
 description = "Integrates Gitee (码云) into OpenIDEA: view and manage pull requests and issues, create remote repositories, and clone/push to Gitee — all from the editor."

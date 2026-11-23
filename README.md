@@ -69,6 +69,19 @@ openidea-gitee/
 > `openidea-plugin = { git = "https://github.com/l0ng-ai/openidea", tag = "v0.1.50" }`
 > 并删除 `vendor/` 目录。
 
+## 能力用途说明（Capability justification）
+
+上架审核要求说明每个高风险能力的用途。本插件在 `plugin.toml` 中声明：
+
+| 能力 | 用途 |
+| --- | --- |
+| `net:gitee.com` | 通过 HTTPS 调用 Gitee OpenAPI v5，获取 PR/Issue 列表、仓库信息，以及创建远程仓库。域名限定为 `gitee.com`，不访问其他主机。 |
+| `process:git` | 执行 `git clone`（克隆命令）与 `git push`（推送命令）。这是实现「克隆仓库」「推送到远程」两个功能的必要手段，仅在你主动触发这些命令时运行，且只使用固定的 `git` 可执行文件与固定参数。 |
+| `secrets` | 读取你在 IDE 秘密存储（系统钥匙串）里配置的 `gitee-token` / `gitee-oauth-token`。插件代码不接触明文，仅通过 `{{secret:name}}` 占位符让 IDE 在发请求时自动注入鉴权头。 |
+| `project.read` | 读取当前项目的 Gitee 远程地址（`Project::vcs_remotes()`），用于确定要查询的 `owner/repo`。 |
+| `vcs.read` | 获取版本控制状态，用于在状态栏跟随当前聚焦的仓库。 |
+| `events` | 订阅定时刷新（`on-schedule`）与 VCS 变更事件，让状态栏的 PR 数量保持更新。 |
+
 ## 技术要点
 
 - **网络**：`host::fetch`，HTTPS 需 `net:gitee.com` 能力；鉴权头用 `{{secret:...}}` 占位符 + `secrets` 能力。
