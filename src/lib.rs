@@ -36,6 +36,11 @@ const VIEW_ID: &str = "repos";
 /// The commit check declared as `[[contributes.commitChecks]]`.
 const COMMIT_CHECK: &str = "issue-reference";
 
+/// The Clone Repository dialog's Gitee page, declared as
+/// `[[contributes.cloneSources]]`; a page of a web point, so its messages reach
+/// `handle` under this key (API 1.15).
+const CLONE_VIEW: &str = "cloneSources/gitee";
+
 #[derive(Default)]
 pub struct GiteePlugin {
     /// Repositories of the token, as of the last fetch.
@@ -508,6 +513,13 @@ impl Views for GiteePlugin {
     }
 
     fn handle(&mut self, view: &str, event: ViewEvent, ctx: &Invocation) -> Result<(), Error> {
+        if view == CLONE_VIEW {
+            // Its page asks for the repository list; `clone-url` is the dialog's.
+            if let ViewEvent::Message(text) = event {
+                self.answer_clone_page(&text);
+            }
+            return Ok(());
+        }
         if view != VIEW_ID {
             return Err(Error::NotFound(format!("view {view}")));
         }
@@ -897,6 +909,95 @@ fn html_to_text(html: &str) -> String {
         text.push('\n');
     }
     text.trim().to_owned()
+}
+
+// ---------------------------------------------------------------- clone source
+
+impl GiteePlugin {
+    /// Answer the clone page: `{"op":"list"}` or `{"op":"refresh"}`.
+    ///
+    /// Failures go to the page rather than out of `handle`: a dialog that cannot
+    /// list repositories should say so in its pane, not raise an IDE notification
+    /// over the dialog the user is looking at.
+    fn answer_clone_page(&mut self, text: &str) {
+        let request: serde_json::Value =
+            serde_json::from_str(text).unwrap_or(serde_json::Value::Null);
+        let force = match request.get("op").and_then(|op| op.as_str()) {
+            Some("list") => false,
+            Some("refresh") => true,
+            // `clone-url` belongs to the dialog; an unknown op may be a newer page.
+            _ => return,
+        };
+        let payload = match self.clone_page_payload(force) {
+            Ok(payload) => payload,
+            Err(error) => serde_json::json!({
+                "op": "error",
+                "message": error.to_string(),
+                "hint": t("检查网络后点刷新重试。", "Check the network, then refresh."),
+            }),
+        };
+        let _ = host::post_view_message(CLONE_VIEW, &payload.to_string());
+    }
+
+    /// The repositories the dialog's Gitee page shows, with the labels its
+    /// controls read (the page ships one language-neutral HTML file).
+    fn clone_page_payload(&mut self, force: bool) -> Result<serde_json::Value, Error> {
+        if !has_token() {
+            return Ok(serde_json::json!({
+                "op": "error",
+                "message": t("尚未配置 Gitee 令牌。", "No Gitee token yet."),
+                "hint": t(
+                    "打开「设置 › 插件 › Gitee › Secrets」填入私人访问令牌，然后点刷新。",
+                    "Open Settings › Plugins › Gitee › Secrets, add a personal access token, then refresh.",
+                ),
+            }));
+        }
+        self.ensure_repos(force)?;
+        let repos: Vec<serde_json::Value> = self
+            .repos
+            .iter()
+            .map(|repo| {
+                let https = if repo.clone_url.is_empty() {
+                    format!("https://gitee.com/{}.git", repo.full_name)
+                } else {
+                    repo.clone_url.clone()
+                };
+                serde_json::json!({
+                    "name": repo.full_name,
+                    "description": repo.description,
+                    "private": repo.is_private,
+                    "https": https,
+                    "ssh": if repo.ssh_url.is_empty() {
+                        serde_json::Value::Null
+                    } else {
+                        serde_json::json!(repo.ssh_url)
+                    },
+                })
+            })
+            .collect();
+        Ok(serde_json::json!({
+            "op": "repos",
+            "repos": repos,
+            // A full page means the token probably has more than we list: say so
+            // rather than showing a subset as if it were everything.
+            "truncated": repos.len() as u32 >= page_size(),
+            // The page ships one language-neutral file; `lang` fixes its hyphenation.
+            "lang": host::locale(),
+            "labels": {
+                "search": t("搜索仓库", "Search repositories"),
+                "refresh": t("刷新", "Refresh"),
+                "loading": t("正在加载…", "Loading…"),
+                "empty": t("这个令牌看不到任何仓库。", "This token can see no repository."),
+                "noMatch": t("没有匹配的仓库。", "No repository matches."),
+                "private": t("私有", "private"),
+                "hint": t("点击仓库，把地址填入克隆对话框。", "Click a repository to fill in its clone URL."),
+                "truncated": t(
+                    "列表已到每页上限，可能还有更多仓库：在设置里调大「每页数量」。",
+                    "The list hit the page size, so there may be more: raise it in Settings.",
+                ),
+            },
+        }))
+    }
 }
 
 // ---------------------------------------------------------------- write commands
@@ -1838,6 +1939,146 @@ mod tests {
         // Out-of-range values fall back into the allowed window.
         host.set_setting("defaultPageSize", "5000");
         assert_eq!(page_size(), Page::MAX_PER_PAGE);
+    }
+
+    /// A host for the clone page: `count` repositories of the token, whose first
+    /// two carry the fields the page shows (SSH URL, description, privacy).
+    fn clone_page_host_with(token: bool, count: usize) -> MockHost {
+        let host = MockHost::install()
+            .with_capabilities(&["secrets", "net:gitee.com", "project.read", "vcs.read", "events"]);
+        if token {
+            host.set_secret("gitee-token", "test-token");
+        }
+        let mut repos = String::from(
+            r#"[{"full_name":"acme/widgets","clone_url":"https://gitee.com/acme/widgets.git","ssh_url":"git@gitee.com:acme/widgets.git","private":true,"description":"Widgets"},{"full_name":"acme/gadgets","private":false}"#,
+        );
+        for index in 2..count {
+            repos.push_str(&format!(
+                r#",{{"full_name":"acme/repo{index}","clone_url":"https://gitee.com/acme/repo{index}.git","private":false}}"#
+            ));
+        }
+        repos.push(']');
+        host.on_fetch(move |req| {
+            assert!(req.url.contains("/user/repos"), "{}", req.url);
+            crate::api::json(200, &repos)
+        });
+        host
+    }
+
+    fn clone_page_host(token: bool) -> MockHost {
+        clone_page_host_with(token, 2)
+    }
+
+    /// The last message the plugin posted to the clone page.
+    fn clone_message(host: &MockHost) -> serde_json::Value {
+        let (view, text) = host
+            .view_messages()
+            .into_iter()
+            .rev()
+            .find(|(view, _)| view == CLONE_VIEW)
+            .expect("the clone page must be answered");
+        serde_json::from_str(&text).unwrap_or_else(|e| panic!("{view}: {text}: {e}"))
+    }
+
+    #[test]
+    fn the_clone_page_lists_the_repositories_of_the_token() {
+        let host = clone_page_host(true);
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+
+        let message = clone_message(&host);
+        assert_eq!(message["op"], "repos");
+        let repos = message["repos"].as_array().unwrap();
+        assert_eq!(repos.len(), 2);
+        assert_eq!(repos[0]["name"], "acme/widgets");
+        assert_eq!(repos[0]["https"], "https://gitee.com/acme/widgets.git");
+        assert_eq!(repos[0]["ssh"], "git@gitee.com:acme/widgets.git");
+        assert_eq!(repos[0]["private"], true);
+        assert_eq!(repos[0]["description"], "Widgets");
+        // A repository without a clone URL still gets one the dialog can use.
+        assert_eq!(repos[1]["https"], "https://gitee.com/acme/gadgets.git");
+        assert!(repos[1]["ssh"].is_null());
+        // The page's controls are labelled by the plugin, which knows the language.
+        assert!(message["labels"]["search"].as_str().is_some_and(|s| !s.is_empty()));
+
+        // Reopening the dialog reuses the cache: one request for two lists.
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+        assert_eq!(host.requests().len(), 1, "the list must come from the cache");
+    }
+
+    #[test]
+    fn the_clone_page_says_when_the_list_is_capped() {
+        // A full page (10 of 10) may hide more; 10 of 100 does not.
+        let host = clone_page_host_with(true, 10);
+        host.set_setting("defaultPageSize", "10");
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+        let message = clone_message(&host);
+        assert_eq!(message["truncated"], true);
+        assert!(message["labels"]["truncated"].as_str().is_some_and(|s| !s.is_empty()));
+
+        // A page size above what came back means the list is complete.
+        host.set_setting("defaultPageSize", "100");
+        let mut plugin = GiteePlugin::default();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+        assert_eq!(clone_message(&host)["truncated"], false);
+    }
+
+    #[test]
+    fn the_clone_page_refreshes_past_the_cache() {
+        let host = clone_page_host(true);
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"refresh"}"#.into()), &ctx)
+            .unwrap();
+        assert_eq!(host.requests().len(), 2, "refresh must refetch");
+        assert_eq!(clone_message(&host)["op"], "repos");
+    }
+
+    #[test]
+    fn the_clone_page_says_what_to_do_without_a_token() {
+        let host = clone_page_host(false);
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        plugin
+            .handle(CLONE_VIEW, ViewEvent::Message(r#"{"op":"list"}"#.into()), &ctx)
+            .unwrap();
+        let message = clone_message(&host);
+        assert_eq!(message["op"], "error");
+        assert!(message["hint"].as_str().is_some_and(|h| h.contains("令牌") || h.contains("token")));
+        assert!(host.requests().is_empty(), "nothing may be fetched without a token");
+    }
+
+    #[test]
+    fn the_clone_page_ignores_other_messages() {
+        let host = clone_page_host(true);
+        let ctx = host.invocation();
+        let mut plugin = GiteePlugin::default();
+        for text in [
+            r#"{"op":"clone-url","url":"https://gitee.com/acme/widgets.git"}"#,
+            r#"{"op":"something-newer"}"#,
+            "",
+            "not json",
+        ] {
+            plugin.handle(CLONE_VIEW, ViewEvent::Message(text.into()), &ctx).unwrap();
+        }
+        assert!(host.view_messages().is_empty(), "the dialog owns `clone-url`");
+        // A click on a row is not a view event either; it must not panic.
+        plugin.handle(CLONE_VIEW, ViewEvent::Button("row".into()), &ctx).unwrap();
     }
 
     #[test]

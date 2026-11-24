@@ -1,14 +1,14 @@
 id = "code2y6m.gitee-plugin"
 name = "Gitee"
-version = "1.0.3"
+version = "1.1.0"
 description = "Integrates Gitee (码云) into OpenIDEA: browse and manage pull requests and issues, review changes, clone and push, and hand Gitee to the AI agent — all from the editor."
 authors = ["Key"]
 homepage = "https://github.com/Code2Y6M/gitee-plugin"
 license = "Apache-2.0"
-change-notes = "1.0.3 — the panel's Clone button and double-clicking a repository clone again (they passed a key without the repo: prefix and dropped the error), and boolean/number settings are read as the JSON the settings page stores, so the issue-in-commit check works."
+change-notes = "1.1.0 — Gitee now appears in Get from VCS › Clone Repository: its pane searches the token's repositories and fills in the clone URL (HTTPS or SSH), so cloning no longer starts with copying a URL. Needs plugin API 1.15; 1.0.3 stays for earlier IDEs."
 categories = ["vcs"]
 icon = "icon.svg"
-engines.openidea = "^1.14"
+engines.openidea = "^1.15"
 wasm = "dist/plugin.wasm"
 
 # Wake up on schedule (periodic PR/Issue refresh), when a project's VCS state
@@ -137,6 +137,14 @@ id = "repos"
 title = "Gitee"
 icon = "branch"
 location = "right"
+
+# The Gitee entry of Get from VCS › Clone Repository (plugin API 1.15). Its page
+# lists the token's repositories and hands the dialog a clone URL.
+[[contributes.cloneSources]]
+id = "gitee"
+label = "Gitee"
+icon = "branch"
+web = "clone/index.html"
 
 # Tools › Gitee: Open Repositories Panel
 [[contributes.menus]]

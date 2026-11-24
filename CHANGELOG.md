@@ -3,6 +3,24 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.1.0
+
+### Added
+
+- **Gitee in the Clone Repository dialog.** `[[contributes.cloneSources]]`
+  (plugin API 1.15) adds a **Gitee** entry to **Get from VCS**: its pane lists
+  the token's repositories with a search box, switches between HTTPS and SSH
+  clone URLs, and a click fills the dialog's URL field — git still runs only on
+  Close/Clone. Without a token or on a network failure the pane says what to do
+  instead of showing an empty list.
+- The page is one file (`clone/index.html`) on the sandboxed frame API: no
+  network, no storage, `postMessage` to the plugin and nothing else.
+
+### Changed
+
+- `engines.openidea` is `^1.15` for this version. **1.0.3 stays the version for
+  IDEs with plugin API 1.14 and earlier**, so the registry lists both.
+
 ## Unreleased
 
 ### Fixed

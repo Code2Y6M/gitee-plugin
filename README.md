@@ -1,6 +1,6 @@
 # Gitee for OpenIDEA
 
-把 [Gitee（码云）](https://gitee.com) 集成进 OpenIDEA：在编辑器的 Gitee 面板里看通知、Pull Request、Issue 和仓库，审阅改动、评论、合并、建 Issue、克隆与推送，并把 Gitee 作为工具交给 AI 代理。
+把 [Gitee（码云）](https://gitee.com) 集成进 OpenIDEA：在编辑器的 Gitee 面板里看通知、Pull Request、Issue 和仓库，审阅改动、评论、合并、建 Issue、克隆与推送，在「克隆仓库」对话框里直接挑仓库，并把 Gitee 作为工具交给 AI 代理。
 
 OpenIDEA 插件是**沙箱化的 WebAssembly 组件**（WASI preview 2），用 Rust 编写，通过 `openidea-plugin` SDK 与 IDE 交互。
 
@@ -35,6 +35,17 @@ OpenIDEA 插件是**沙箱化的 WebAssembly 组件**（WASI preview 2），用 
 - **工具栏**：刷新 / 切换 PR 状态 / 新建 PR / 克隆 / 全部命令
 - **右键菜单**：详情、改动文件、评论、通过审查、合并、改 Issue 状态、克隆、浏览器打开（按条目类型显示）
 - 未配置令牌时，面板直接给出指引（设置 › 插件 › Gitee › Secrets）
+
+### 克隆仓库对话框（Get from VCS）
+
+**文件 › 新建 › 从 VCS 获取**（或欢迎页的 Clone Repository）左侧的来源列表里多一项 **Gitee**：
+
+- 列出令牌可见的仓库，可搜索（名称与描述）
+- **HTTPS / SSH** 一键切换克隆地址（仓库没有 SSH 地址时回退 HTTPS）
+- 点一个仓库，地址填进对话框的「仓库 URL」，随后仍是你熟悉的目标目录 / 浅克隆表单——git 只在点 Clone 后运行
+- 未配置令牌、网络失败时，右边的面板直接说明原因和下一步
+
+这一项来自插件 API 1.15 的 `[[contributes.cloneSources]]`：页面（`clone/index.html`）跑在沙箱 frame 里，没有网络，只通过 `openidea.postMessage` 向插件要数据，选中后把地址交回对话框。**因此 1.1.0 需要 OpenIDEA 的插件 API 1.15**；更早的 IDE 请装 1.0.3。
 
 ### 与 IDE 的其它集成
 
@@ -95,6 +106,8 @@ openidea-gitee/
 ├─ build.sh
 ├─ locales/
 │  └─ zh-CN.json       # 中文文案（命令标题、设置项、密钥说明）
+├─ clone/
+│  └─ index.html       # 「克隆仓库」对话框里的 Gitee 页面（单文件，无网络）
 ├─ mcp/                # MCP 工具的输入 JSON Schema
 ├─ settings/
 │  └─ settings.json    # 设置页 schema

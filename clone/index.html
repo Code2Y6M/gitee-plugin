@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gitee</title>
+    <!--
+      The Gitee entry of the Clone Repository dialog ([[contributes.cloneSources]]).
+      It runs in a sandboxed frame with no network: every repository comes from the
+      plugin's code over openidea.postMessage / openidea.onMessage, and a click hands
+      the dialog the clone URL. One file, because the frame's CSP allows inline
+      scripts and styles and the package's own files only.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: var(--openidea-bg, #ffffff);
+        --bg-input: var(--openidea-bg-input, #ffffff);
+        --bg-hover: var(--openidea-bg-hover, #f2f3f5);
+        --bg-selected: var(--openidea-bg-selected, #e8f0fe);
+        --fg: var(--openidea-fg, #1f2328);
+        --fg-strong: var(--openidea-fg-strong, #111418);
+        --fg-muted: var(--openidea-fg-muted, #6b7280);
+        --border: var(--openidea-border, #e1e4e8);
+        --accent: var(--openidea-accent, #2f6feb);
+        --danger: var(--openidea-danger, #cf222e);
+        --focus: var(--openidea-focus-ring, #2f6feb);
+        --font: var(--openidea-font-ui, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif);
+        --size: var(--openidea-font-size, 13px);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        color: var(--fg);
+        font: var(--size) / 1.45 var(--font);
+        overflow: hidden;
+      }
+
+      header {
+        display: flex;
+        flex: none;
+        gap: 6px;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #query {
+        flex: 1;
+        min-width: 0;
+        padding: 5px 9px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-input);
+        color: inherit;
+        font: inherit;
+      }
+
+      #query:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: -1px;
+      }
+
+      button {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--bg-hover);
+      }
+
+      .protocol {
+        display: inline-flex;
+        flex: none;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+      }
+
+      .protocol button {
+        padding: 4px 7px;
+        border: 0;
+        border-radius: 0;
+        font-size: 11px;
+        letter-spacing: 0.02em;
+      }
+
+      .protocol button + button {
+        border-left: 1px solid var(--border);
+      }
+
+      .protocol button[aria-pressed="true"] {
+        background: var(--bg-selected);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      #refresh {
+        flex: none;
+        width: 28px;
+        height: 26px;
+        padding: 0;
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      main {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 4px;
+      }
+
+      .repo {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        width: 100%;
+        padding: 6px 8px;
+        border: 0;
+        border-radius: 6px;
+        text-align: left;
+      }
+
+      .repo:hover {
+        background: var(--bg-hover);
+      }
+
+      .repo .body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .repo .name,
+      .repo .description {
+        display: block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .repo .name {
+        color: var(--fg-strong);
+        font-weight: 600;
+      }
+
+      .repo .owner {
+        color: var(--fg-muted);
+      }
+
+      .repo .description {
+        color: var(--fg-muted);
+        font-size: 12px;
+      }
+
+      .badge {
+        flex: none;
+        padding: 0 4px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--fg-muted);
+        font-size: 10px;
+        line-height: 15px;
+      }
+
+      .more {
+        padding: 6px 10px;
+        color: var(--fg-muted);
+        font-size: 11px;
+      }
+
+      .state {
+        padding: 18px 12px;
+        color: var(--fg-muted);
+        text-align: center;
+      }
+
+      .state strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--fg);
+        font-weight: 600;
+      }
+
+      .state.error strong {
+        color: var(--danger);
+      }
+
+      .state .hint {
+        font-size: 12px;
+        white-space: pre-line;
+      }
+
+      footer {
+        display: flex;
+        flex: none;
+        gap: 8px;
+        padding: 5px 10px;
+        border-top: 1px solid var(--border);
+        color: var(--fg-muted);
+        font-size: 11px;
+      }
+
+      footer .count {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <input id="query" type="search" autocomplete="off" spellcheck="false" />
+      <div class="protocol" role="group">
+        <button id="https" type="button" aria-pressed="true">HTTPS</button>
+        <button id="ssh" type="button" aria-pressed="false">SSH</button>
+      </div>
+      <button id="refresh" type="button">&#x21bb;</button>
+    </header>
+    <main id="list" role="listbox"></main>
+    <footer>
+      <span id="hint"></span>
+      <span class="count" id="count"></span>
+    </footer>
+    <script>
+      (() => {
+        "use strict";
+
+        /** What the plugin last told us. */
+        const state = {
+          repos: [],
+          labels: {},
+          loading: true,
+          error: null,
+          query: "",
+          protocol: "https",
+          truncated: false,
+        };
+
+        const byId = (id) => document.getElementById(id);
+        const list = byId("list");
+        const footer = document.querySelector("footer");
+
+        const label = (key, fallback) => {
+          const value = state.labels[key];
+          return typeof value === "string" && value ? value : fallback;
+        };
+
+        const stateBlock = (title, hint, error) => {
+          const block = document.createElement("div");
+          block.className = error ? "state error" : "state";
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+          block.append(strong);
+          if (hint) {
+            const text = document.createElement("div");
+            text.className = "hint";
+            text.textContent = hint;
+            block.append(text);
+          }
+          return block;
+        };
+
+        const showError = (message, hint) => {
+          list.replaceChildren(stateBlock(message, hint, true));
+          footer.hidden = true;
+        };
+
+        /** The frame's half of the protocol; a plain browser just sees the states. */
+        const post = (message) => {
+          try {
+            window.openidea.postMessage(JSON.stringify(message));
+          } catch {
+            showError("This page talks to its plugin inside OpenIDEA.", "");
+          }
+        };
+
+        const matches = (repo) => {
+          const query = state.query.trim().toLowerCase();
+          if (!query) return true;
+          return `${repo.name} ${repo.description || ""}`.toLowerCase().includes(query);
+        };
+
+        const urlOf = (repo) => (state.protocol === "ssh" && repo.ssh ? repo.ssh : repo.https);
+
+        const repoRow = (repo) => {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = "repo";
+          row.setAttribute("role", "option");
+          row.title = urlOf(repo);
+          // The dialog owns the cloning; the page only hands it the address.
+          row.addEventListener("click", () => post({ op: "clone-url", url: urlOf(repo) }));
+
+          const slash = repo.name.lastIndexOf("/");
+          const owner = slash > 0 ? repo.name.slice(0, slash + 1) : "";
+          const name = slash > 0 ? repo.name.slice(slash + 1) : repo.name;
+
+          const body = document.createElement("span");
+          body.className = "body";
+          const title = document.createElement("span");
+          title.className = "name";
+          if (owner) {
+            const prefix = document.createElement("span");
+            prefix.className = "owner";
+            prefix.textContent = owner;
+            title.append(prefix, name);
+          } else {
+            title.textContent = name;
+          }
+          body.append(title);
+          if (repo.description) {
+            const description = document.createElement("span");
+            description.className = "description";
+            description.textContent = repo.description;
+            body.append(description);
+          }
+          row.append(body);
+
+          if (repo.private) {
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = label("private", "private");
+            row.append(badge);
+          }
+          return row;
+        };
+
+        const render = () => {
+          list.setAttribute("aria-busy", state.loading ? "true" : "false");
+          if (state.error) {
+            showError(state.error.message, state.error.hint);
+            return;
+          }
+          if (state.loading && state.repos.length === 0) {
+            showError(label("loading", "Loading…"), "");
+            return;
+          }
+          const repos = state.repos.filter(matches);
+          if (repos.length === 0) {
+            showError(
+              state.repos.length === 0
+                ? label("empty", "This token can see no repository.")
+                : label("noMatch", "No repository matches."),
+              "",
+            );
+            footer.hidden = state.repos.length === 0;
+            return;
+          }
+          const rows = repos.map(repoRow);
+          if (state.truncated) {
+            // Only honest if the plugin says so: a page-sized list may hide more.
+            const more = document.createElement("div");
+            more.className = "more";
+            more.textContent = label("truncated", "");
+            if (more.textContent) rows.push(more);
+          }
+          list.replaceChildren(...rows);
+          footer.hidden = false;
+          byId("hint").textContent = label("hint", "Click a repository to fill in its clone URL.");
+          byId("count").textContent = `${repos.length} / ${state.repos.length}`;
+          byId("refresh").title = label("refresh", "Refresh");
+          byId("query").placeholder = label("search", "Search repositories");
+        };
+
+        const setProtocol = (protocol) => {
+          state.protocol = protocol;
+          byId("https").setAttribute("aria-pressed", String(protocol === "https"));
+          byId("ssh").setAttribute("aria-pressed", String(protocol === "ssh"));
+          render();
+        };
+
+        byId("https").addEventListener("click", () => setProtocol("https"));
+        byId("ssh").addEventListener("click", () => setProtocol("ssh"));
+        byId("refresh").addEventListener("click", () => {
+          state.loading = true;
+          state.error = null;
+          render();
+          post({ op: "refresh" });
+        });
+        byId("query").addEventListener("input", (event) => {
+          state.query = event.target.value;
+          render();
+        });
+
+        /** The plugin's side of the protocol: repositories, a failure, or nothing we know. */
+        const received = (text) => {
+          let message;
+          try {
+            message = JSON.parse(text);
+          } catch {
+            return;
+          }
+          if (!message || typeof message !== "object") return;
+          if (message.op === "repos" && Array.isArray(message.repos)) {
+            state.repos = message.repos.filter((repo) => repo && typeof repo.https === "string");
+            state.labels = message.labels && typeof message.labels === "object" ? message.labels : {};
+            state.truncated = message.truncated === true;
+            state.loading = false;
+            state.error = null;
+            if (typeof message.lang === "string" && message.lang) {
+              document.documentElement.lang = message.lang;
+            }
+          } else if (message.op === "error") {
+            state.loading = false;
+            state.error = {
+              message: String(message.message || label("failed", "Could not load repositories.")),
+              hint: typeof message.hint === "string" ? message.hint : "",
+            };
+          } else {
+            return;
+          }
+          render();
+        };
+
+        if (window.openidea && typeof window.openidea.onMessage === "function") {
+          window.openidea.onMessage(received);
+          // The labels are the plugin's (it knows the IDE language), so the first
+          // paint is neutral until its answer arrives.
+          render();
+          post({ op: "list" });
+        } else {
+          showError("This page talks to its plugin inside OpenIDEA.", "");
+        }
+      })();
+    </script>
+  </body>
+</html>
