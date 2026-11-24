@@ -153,6 +153,10 @@
         background: var(--bg-hover);
       }
 
+      .repo[aria-selected="true"] {
+        background: var(--bg-selected);
+      }
+
       .repo .body {
         display: flex;
         flex: 1;
@@ -282,6 +286,7 @@
           query: "",
           protocol: "https",
           truncated: false,
+          picked: null,
         };
 
         const byId = (id) => document.getElementById(id);
@@ -336,8 +341,22 @@
           row.className = "repo";
           row.setAttribute("role", "option");
           row.title = urlOf(repo);
-          // The dialog owns the cloning; the page only hands it the address.
-          row.addEventListener("click", () => post({ op: "clone-url", url: urlOf(repo) }));
+          row.setAttribute("aria-selected", String(repo.name === state.picked));
+          // A click fills the dialog's URL field; a double click clones right away,
+          // like the built-in sources (`clone: true` reaches `onClone`).
+          row.addEventListener("click", () => {
+            state.picked = repo.name;
+            post({ op: "clone-url", url: urlOf(repo) });
+            // Mark it without rebuilding the list: a re-render would replace this
+            // node between the two clicks of a double click, which would then never fire.
+            for (const other of list.querySelectorAll(".repo")) {
+              other.setAttribute("aria-selected", String(other === row));
+            }
+          });
+          row.addEventListener("dblclick", () => {
+            state.picked = repo.name;
+            post({ op: "clone-url", url: urlOf(repo), clone: true });
+          });
 
           const slash = repo.name.lastIndexOf("/");
           const owner = slash > 0 ? repo.name.slice(0, slash + 1) : "";

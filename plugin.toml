@@ -1,11 +1,11 @@
 id = "code2y6m.gitee-plugin"
 name = "Gitee"
-version = "1.1.1"
+version = "1.1.2"
 description = "Integrates Gitee (码云) into OpenIDEA: browse and manage pull requests and issues, review changes, clone and push, and hand Gitee to the AI agent — all from the editor."
 authors = ["Key"]
 homepage = "https://github.com/Code2Y6M/gitee-plugin"
 license = "Apache-2.0"
-change-notes = "1.1.1 — Gitee appears in Get from VCS › Clone Repository: its pane searches the token's repositories and fills in the clone URL (HTTPS or SSH). This build fixes the pane's failure state (a missing token or a network error now disables the controls it cannot use and keeps its labels), puts the private badge next to the name and draws the refresh button as an icon. Needs plugin API 1.15; 1.0.3 stays for earlier IDEs."
+change-notes = "1.1.2 — Gitee appears in Get from VCS › Clone Repository: its pane searches the token's repositories and fills in the clone URL (HTTPS or SSH), and the entry shows the plugin's own logo (a package SVG). Needs plugin API 1.15; 1.0.3 stays for earlier IDEs."
 categories = ["vcs"]
 icon = "icon.svg"
 engines.openidea = "^1.15"
@@ -143,7 +143,7 @@ location = "right"
 [[contributes.cloneSources]]
 id = "gitee"
 label = "Gitee"
-icon = "branch"
+icon = "icon.svg"
 web = "clone/index.html"
 
 # Tools › Gitee: Open Repositories Panel

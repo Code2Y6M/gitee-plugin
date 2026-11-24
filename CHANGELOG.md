@@ -3,6 +3,14 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.1.2
+
+### Changed
+
+- The clone source uses the plugin's own logo (`icon = "icon.svg"`) instead of a
+  generic IDE icon, now that `[[contributes.cloneSources]]` accepts a package SVG.
+  Needs a build with that support; 1.1.1 used `branch`.
+
 ## 1.1.1
 
 ### Fixed
