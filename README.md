@@ -45,6 +45,10 @@ OpenIDEA 插件是**沙箱化的 WebAssembly 组件**（WASI preview 2），用 
 - 点一个仓库，地址填进对话框的「仓库 URL」，随后仍是你熟悉的目标目录 / 浅克隆表单——git 只在点 Clone 后运行
 - 未配置令牌、网络失败时，右边的面板直接说明原因和下一步
 
+![克隆仓库对话框里的 Gitee](docs/img/clone-source-light.png)
+
+<sub>页面在 Chromium 中用桩 bridge 渲染（亮色主题）；深色见 [clone-source-dark.png](docs/img/clone-source-dark.png)，无令牌时的状态见 [clone-source-error.png](docs/img/clone-source-error.png)。</sub>
+
 这一项来自插件 API 1.15 的 `[[contributes.cloneSources]]`：页面（`clone/index.html`）跑在沙箱 frame 里，没有网络，只通过 `openidea.postMessage` 向插件要数据，选中后把地址交回对话框。**因此 1.1.0 需要 OpenIDEA 的插件 API 1.15**；更早的 IDE 请装 1.0.3。
 
 ### 与 IDE 的其它集成

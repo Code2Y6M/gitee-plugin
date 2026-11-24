@@ -913,6 +913,24 @@ fn html_to_text(html: &str) -> String {
 
 // ---------------------------------------------------------------- clone source
 
+/// The clone page's controls in the IDE's language: the page ships one
+/// language-neutral file, so every answer (a list, a failure) carries them.
+fn clone_labels() -> serde_json::Value {
+    serde_json::json!({
+        "search": t("搜索仓库", "Search repositories"),
+        "refresh": t("刷新", "Refresh"),
+        "loading": t("正在加载…", "Loading…"),
+        "empty": t("这个令牌看不到任何仓库。", "This token can see no repository."),
+        "noMatch": t("没有匹配的仓库。", "No repository matches."),
+        "private": t("私有", "private"),
+        "hint": t("点击仓库，把地址填入克隆对话框。", "Click a repository to fill in its clone URL."),
+        "truncated": t(
+            "列表已到每页上限，可能还有更多仓库：在设置里调大「每页数量」。",
+            "The list hit the page size, so there may be more: raise it in Settings.",
+        ),
+    })
+}
+
 impl GiteePlugin {
     /// Answer the clone page: `{"op":"list"}` or `{"op":"refresh"}`.
     ///
@@ -932,6 +950,7 @@ impl GiteePlugin {
             Ok(payload) => payload,
             Err(error) => serde_json::json!({
                 "op": "error",
+                "labels": clone_labels(),
                 "message": error.to_string(),
                 "hint": t("检查网络后点刷新重试。", "Check the network, then refresh."),
             }),
@@ -945,6 +964,7 @@ impl GiteePlugin {
         if !has_token() {
             return Ok(serde_json::json!({
                 "op": "error",
+                "labels": clone_labels(),
                 "message": t("尚未配置 Gitee 令牌。", "No Gitee token yet."),
                 "hint": t(
                     "打开「设置 › 插件 › Gitee › Secrets」填入私人访问令牌，然后点刷新。",
@@ -978,24 +998,12 @@ impl GiteePlugin {
         Ok(serde_json::json!({
             "op": "repos",
             "repos": repos,
+            "labels": clone_labels(),
             // A full page means the token probably has more than we list: say so
             // rather than showing a subset as if it were everything.
             "truncated": repos.len() as u32 >= page_size(),
             // The page ships one language-neutral file; `lang` fixes its hyphenation.
             "lang": host::locale(),
-            "labels": {
-                "search": t("搜索仓库", "Search repositories"),
-                "refresh": t("刷新", "Refresh"),
-                "loading": t("正在加载…", "Loading…"),
-                "empty": t("这个令牌看不到任何仓库。", "This token can see no repository."),
-                "noMatch": t("没有匹配的仓库。", "No repository matches."),
-                "private": t("私有", "private"),
-                "hint": t("点击仓库，把地址填入克隆对话框。", "Click a repository to fill in its clone URL."),
-                "truncated": t(
-                    "列表已到每页上限，可能还有更多仓库：在设置里调大「每页数量」。",
-                    "The list hit the page size, so there may be more: raise it in Settings.",
-                ),
-            },
         }))
     }
 }
@@ -2060,6 +2068,8 @@ mod tests {
         let message = clone_message(&host);
         assert_eq!(message["op"], "error");
         assert!(message["hint"].as_str().is_some_and(|h| h.contains("令牌") || h.contains("token")));
+        // The pane's own controls are still there: their labels come along.
+        assert!(message["labels"]["search"].as_str().is_some_and(|s| !s.is_empty()));
         assert!(host.requests().is_empty(), "nothing may be fetched without a token");
     }
 

@@ -114,12 +114,21 @@
       }
 
       #refresh {
+        display: grid;
         flex: none;
+        place-items: center;
         width: 28px;
         height: 26px;
         padding: 0;
-        font-size: 14px;
-        line-height: 1;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      button:disabled:hover {
+        background: transparent;
       }
 
       main {
@@ -151,9 +160,17 @@
         min-width: 0;
       }
 
+      .repo .titleLine {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        min-width: 0;
+      }
+
       .repo .name,
       .repo .description {
         display: block;
+        min-width: 0;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -238,7 +255,14 @@
         <button id="https" type="button" aria-pressed="true">HTTPS</button>
         <button id="ssh" type="button" aria-pressed="false">SSH</button>
       </div>
-      <button id="refresh" type="button">&#x21bb;</button>
+      <button id="refresh" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"
+          />
+        </svg>
+      </button>
     </header>
     <main id="list" role="listbox"></main>
     <footer>
@@ -321,6 +345,8 @@
 
           const body = document.createElement("span");
           body.className = "body";
+          const titleLine = document.createElement("span");
+          titleLine.className = "titleLine";
           const title = document.createElement("span");
           title.className = "name";
           if (owner) {
@@ -331,7 +357,14 @@
           } else {
             title.textContent = name;
           }
-          body.append(title);
+          titleLine.append(title);
+          if (repo.private) {
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = label("private", "private");
+            titleLine.append(badge);
+          }
+          body.append(titleLine);
           if (repo.description) {
             const description = document.createElement("span");
             description.className = "description";
@@ -339,18 +372,19 @@
             body.append(description);
           }
           row.append(body);
-
-          if (repo.private) {
-            const badge = document.createElement("span");
-            badge.className = "badge";
-            badge.textContent = label("private", "private");
-            row.append(badge);
-          }
           return row;
         };
 
         const render = () => {
           list.setAttribute("aria-busy", state.loading ? "true" : "false");
+          // With nothing to search or switch, the controls say so instead of
+          // looking ready (the first thing a missing token shows).
+          const unavailable = Boolean(state.error);
+          byId("query").placeholder = label("search", "Search repositories");
+          byId("query").disabled = unavailable;
+          byId("refresh").title = label("refresh", "Refresh");
+          byId("https").disabled = unavailable;
+          byId("ssh").disabled = unavailable;
           if (state.error) {
             showError(state.error.message, state.error.hint);
             return;
@@ -382,8 +416,6 @@
           footer.hidden = false;
           byId("hint").textContent = label("hint", "Click a repository to fill in its clone URL.");
           byId("count").textContent = `${repos.length} / ${state.repos.length}`;
-          byId("refresh").title = label("refresh", "Refresh");
-          byId("query").placeholder = label("search", "Search repositories");
         };
 
         const setProtocol = (protocol) => {
@@ -425,6 +457,9 @@
               document.documentElement.lang = message.lang;
             }
           } else if (message.op === "error") {
+            if (message.labels && typeof message.labels === "object") {
+              state.labels = message.labels;
+            }
             state.loading = false;
             state.error = {
               message: String(message.message || label("failed", "Could not load repositories.")),

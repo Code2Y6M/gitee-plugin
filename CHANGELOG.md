@@ -3,6 +3,18 @@
 All notable changes to the Gitee plugin. Versions follow [Semantic Versioning](https://semver.org/):
 a new feature bumps the minor version, a fix the patch version.
 
+## 1.1.1
+
+### Fixed
+
+- **The clone pane's failure state.** Without a token (the first thing a new
+  install shows) and after a network error, the search box and the HTTPS/SSH
+  switch stayed enabled and the placeholder fell back to English: the labels
+  now ride along with failures too, and the controls that cannot do anything
+  are disabled instead of looking ready.
+- The private badge sits next to the repository name rather than at the far
+  edge of the row, and the refresh button is a vector icon.
+
 ## 1.1.0
 
 ### Added
